@@ -14,22 +14,23 @@ class Product(models.Model):
         ('Home Decor', 'Home Decor'),
         ('Electronics', 'Electronics'),
     ]
+    size_choices = [('S', 'Small'), ('M', 'Medium'), ('L', 'Large')]
     name = models.CharField(max_length=100)  
     description = models.TextField()  
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)  
     price = models.DecimalField(max_digits=10, decimal_places=2)  
     image = models.ImageField(upload_to='products/') 
-    sizes = models.CharField(max_length=50)  
+    sizes = models.CharField(max_length=1,choices=size_choices)  
     colors = models.CharField(max_length=50)  
     availability = models.BooleanField(default=True)  
     rating = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)  
     review = models.TextField(blank=True, null=True) 
-    discount = models.CharField(max_length=20, blank=True, null=True) 
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     date_added = models.DateTimeField(auto_now_add=True) 
     date_updated = models.DateTimeField(auto_now=True)  
     brand = models.CharField(max_length=50, blank=True, null=True)  
-    review_count = models.IntegerField(default=0)  # Count of reviews
-    ratings_count = models.IntegerField(default=0)  # Count of ratings
+    review_count = models.IntegerField(default=0) 
+    ratings_count = models.IntegerField(default=0)  
     rating = models.FloatField(default=0.0)
     likes_count = models.IntegerField(default=0)
 
@@ -74,3 +75,33 @@ class Review(models.Model):
         if self.rating < 1 or self.rating > 5:
             raise ValueError("Rating must be between 1 and 5.")
         super().save(*args, **kwargs)
+        
+
+class Rating(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ratings')
+    rating = models.PositiveSmallIntegerField(default=1)  # Rating between 1 and 5
+    review = models.TextField(blank=True, null=True)  # Optional review
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+
+       
+class Cart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    size = models.CharField(max_length=1, choices=Product.size_choices, default='M') 
+    quantity = models.PositiveIntegerField(default=1)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    def save(self, *args, **kwargs):
+        self.total_price = self.product.price * self.quantity
+        super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"Cart of {self.user.username} - Product: {self.product.name} - Quantity: {self.quantity} - Total: {self.total_price}"
+
+    class Meta:
+        unique_together = ('user', 'product', 'size')
