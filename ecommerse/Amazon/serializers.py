@@ -62,11 +62,19 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CartSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name') 
-    product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2) 
-    product_image = serializers.ImageField(source='product.image')  
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2)  
+    product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = Cart
-        fields = ['product_name', 'product_price', 'size', 'quantity', 'product_image', 'total_price']    
+        fields = ['id', 'user','product_price', 'product', 'size', 'quantity', 'total_price']
+        read_only_fields = ['total_price', 'product_price']
+    
+    def validate_product(self, value):
+        if value is None:
+            raise serializers.ValidationError("Product field cannot be null.")
+        return value
+
+    def validate_quantity(self, value):
+        if value <= 1:
+            raise serializers.ValidationError("Quantity must be greater than 0.")
+        return value
